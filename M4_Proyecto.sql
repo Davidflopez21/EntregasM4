@@ -66,6 +66,13 @@ from "film_category"
 group by "category_id"
 order by "category_id" asc
 
+/* CORRECCIÓN_E7 */
+
+SELECT "rating" AS "Clasificación_Edad", COUNT(*) AS "Cantidad_Películas"
+FROM "film"
+GROUP BY "rating"
+ORDER BY "Cantidad_Películas" DESC;
+
 
 /* E8_ Encuentra el título de todas las películas que son ‘PG13ʼ o tienen una 
 duración mayor a 3 horas en la tabla film. Tomo "Mayor a 3h como extrictamente, si hubiera 
@@ -97,6 +104,14 @@ from "payment"
 order by "payment_date" desc
 offset 1
 limit 1
+
+/* CORRECCIÓN_E11 */
+
+SELECT "payment_id" AS "Identificador_Alquiler", "amount" AS "Precio_Alquiler"
+FROM "payment"
+ORDER BY "payment_date" DESC
+OFFSET 2
+LIMIT 1;
 
 
 /* E12_ Encuentra el título de las películas en la tabla “filmˮ que no sean ni ‘NC
@@ -223,6 +238,11 @@ junto con el promedio de duración. */
 select (avg("rental_date" - "return_date") - 2*avg("rental_date" - "return_date")) as "Duración_Media_Alquiler"
 from "rental" 
 
+/* CORRECCIÓN_E21 */
+
+SELECT AVG("return_date" - "rental_date") AS "Duración_Media_Alquiler"
+FROM "rental";
+
 
 /* E22_ Crea una columna con el nombre y apellidos de todos los actores y actrices. */
 
@@ -293,6 +313,16 @@ on "actor"."actor_id" = "film_actor"."actor_id"
 group by "Nombre_completo"
 order by "Más_de_40Papeles" desc
 
+/* CORRECCIÓN_E28 */
+
+SELECT concat(a."first_name", ' ', a."last_name") AS "Nombre_Completo", 
+       COUNT(fa."film_id") AS "N_Películas"
+FROM "actor" a
+JOIN "film_actor" fa ON a."actor_id" = fa."actor_id"
+GROUP BY a."actor_id", a."first_name", a."last_name"
+HAVING COUNT(fa."film_id") > 40
+ORDER BY "N_Películas" DESC;
+
 
 /* E29_ Obtener todas las películas y, si están disponibles en el inventario, 
 mostrar la cantidad disponible. */
@@ -306,6 +336,15 @@ order by "Cantidad" asc
 /* En cierta manera, si una película tiene un identificador de inventario, no tiene por
 qué implicar que haya stock, pero en ete caso parece que sí. Se hace unión completa 
 para no perder esas posibles películas sin stock en inventario. */ 
+
+/* CORRECCIÓN_E29 */
+
+SELECT f."title" AS "Título_Película", 
+       COUNT(i."inventory_id") AS "Cantidad_Disponible"
+FROM "film" f
+LEFT JOIN "inventory" i ON f."film_id" = i."film_id"
+GROUP BY f."film_id", f."title"
+ORDER BY "Cantidad_Disponible" DESC;
 
 
 /* E30_ Obtener los actores y el número de películas en las que ha actuado */
@@ -361,6 +400,16 @@ from (select "inventory"."film_id" , "rental"."rental_date" , "rental"."return_d
      on "inventory"."inventory_id" = "rental"."rental_id") as "Registro"
 full join "film"
 on "film"."film_id" = "Registro"."film_id"
+
+/* CORRECCIÓN_E33 */
+
+SELECT f."title" AS "Nombre_Película",  
+       r."rental_date", r."return_date", 
+       r."customer_id"
+FROM "film" f
+JOIN "inventory" i ON f."film_id" = i."film_id"
+JOIN "rental" r ON i."inventory_id" = r."inventory_id"
+ORDER BY f."title";
 
 
 /* E34_ Encuentra los 5 clientes que más dinero se hayan gastado con nosotros */
@@ -507,6 +556,26 @@ from (select concat("actor"."first_name" , ' ' , "last_name") as "Nombre_Complet
      where "category"."name" = 'Action')   
 group by "Nombre_Completo"
 
+/* CORRECCIÓN_E45 */
+
+SELECT DISTINCT CONCAT(a.first_name, ' ', a.last_name) AS Nombre_Completo
+FROM actor a
+JOIN film_actor fa ON a.actor_id = fa.actor_id
+JOIN film f ON fa.film_id = f.film_id
+JOIN film_category fc ON f.film_id = fc.film_id
+JOIN category c ON fc.category_id = c.category_id
+WHERE c.name = 'Action'
+ORDER BY Nombre_Completo;
+/* Ó */
+SELECT DISTINCT a.first_name, a.last_name
+FROM actor a
+JOIN film_actor fa ON a.actor_id = fa.actor_id
+JOIN film f ON fa.film_id = f.film_id
+JOIN film_category fc ON f.film_id = fc.film_id
+JOIN category c ON fc.category_id = c.category_id
+WHERE c.name = 'Action'
+ORDER BY a.last_name, a.first_name;
+
      
 /* E46_ Encuentra todos los actores que no han participado en películas. */
 
@@ -520,6 +589,15 @@ where "actor_id" not BETWEEN 0 and 99999999999
 
 -- Todos los actores han participado en alguna película
 
+/* CORRECCIÓN_E46 */
+
+SELECT CONCAT(a.first_name, ' ', a.last_name) AS Nombre_Completo
+FROM actor a
+LEFT JOIN film_actor fa ON a.actor_id = fa.actor_id
+WHERE fa.film_id IS NULL
+ORDER BY a.last_name, a.first_name;
+
+
 /* E47_ Selecciona el nombre de los actores y la cantidad de películas en las 
 que han participado. */
 
@@ -529,6 +607,15 @@ left join "actor"
 on "film_actor"."actor_id" = "actor"."actor_id"
 group by "Nombre_Completo"
 order by "N_Películas" desc
+
+/* CORRECCIÓN_E47 */
+
+SELECT CONCAT(a.first_name, ' ', a.last_name) AS Nombre_Completo,
+       COUNT(fa.film_id) AS N_Películas
+FROM actor a
+JOIN film_actor fa ON a.actor_id = fa.actor_id
+GROUP BY a.actor_id, a.first_name, a.last_name
+ORDER BY N_Películas DESC;
 
 
 /* E48_ Crea una vista llamada “actor_num_peliculasˮ que muestre los nombres 
@@ -659,7 +746,17 @@ on "FilmID_Título_FechaAlquiler_FechaDevolución_CustomerID"."customer_id" =
 where "FilmID_Título_FechaAlquiler_FechaDevolución_CustomerID"."rental_date" < '01/06/2025 00:00:00.000' 
       and "CustomerID_CustomerName"."Nombre_Completo_Cliente" = 'TAMMY SANDERS'
       
-
+/* CORRECCIÓN_E53 */
+      
+SELECT *
+FROM "FilmID_Título_FechaAlquiler_FechaDevolución_CustomerID" f
+JOIN "CustomerID_CustomerName" c
+ON f."customer_id" = c."Customer_Id"
+WHERE c."Nombre_Completo_Cliente" = 'TAMMY SANDERS'
+  AND f."return_date" IS NULL
+ORDER BY f."Título";
+      
+      
 /* E54_  Encuentra los nombres de los actores que han actuado en al menos una 
 película que pertenece a la categoría ‘Sci-Fiʼ. Ordena los resultados 
 alfabéticamente por apellido. */
@@ -692,6 +789,38 @@ películas que se alquilaron después de que la película ‘Spartacus
 Cheaperʼ se alquilara por primera vez. Ordena los resultados 
 alfabéticamente por apellido. */
 
+/* CORRECCIÓN_E55 */
+
+SELECT film_id 
+FROM film 
+WHERE title = 'Spartacus Cheaper';
+
+SELECT MIN(r.rental_date) AS primera_fecha_alquiler
+FROM rental r
+JOIN inventory i ON r.inventory_id = i.inventory_id
+WHERE i.film_id = (
+    SELECT film_id 
+    FROM film 
+    WHERE title = 'Spartacus Cheaper'
+);
+
+SELECT DISTINCT a.first_name, a.last_name
+FROM actor a
+JOIN film_actor fa ON a.actor_id = fa.actor_id
+JOIN inventory i ON fa.film_id = i.film_id
+JOIN rental r ON i.inventory_id = r.inventory_id
+WHERE r.rental_date > (
+    SELECT MIN(r2.rental_date)
+    FROM rental r2
+    JOIN inventory i2 ON r2.inventory_id = i2.inventory_id
+    WHERE i2.film_id = (
+        SELECT film_id 
+        FROM film 
+        WHERE title = 'Spartacus Cheaper'
+    )
+)
+ORDER BY a.last_name, a.first_name;
+
 
 /* E56_ Encuentra el nombre y apellido de los actores que no han actuado en 
 ninguna película de la categoría ‘Musicʼ. */
@@ -716,6 +845,22 @@ from "actor"
 inner join "Actores_MÚSICA"
 on "actor"."actor_id" <> "Actores_MÚSICA"."actor_id"
 order by concat("actor"."first_name" , ' ' , "actor"."last_name")
+
+
+/* CORRECCIÓN_E56 */
+
+SELECT CONCAT(a.first_name, ' ', a.last_name) AS Nombre_Completo
+FROM actor a
+LEFT JOIN (
+    SELECT DISTINCT fa.actor_id
+    FROM film f
+    JOIN film_category fc ON f.film_id = fc.film_id
+    JOIN category c ON fc.category_id = c.category_id
+    JOIN film_actor fa ON f.film_id = fa.film_id
+    WHERE c.name = 'Music'
+) am ON a.actor_id = am.actor_id
+WHERE am.actor_id IS NULL
+ORDER BY a.last_name, a.first_name;
 
 
 /* E58_ Encuentra el título de todas las películas que son de la misma categoría 
